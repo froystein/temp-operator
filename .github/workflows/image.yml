@@ -1,0 +1,54 @@
+name: Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+env:
+  GO_VERSION: "1.22.4"
+  IMAGE_NAME: ghcr.io/froystein/temp-operator
+
+jobs:
+  build_push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Ko
+        uses: ko-build/setup-ko@v0.6
+
+      - name: Set BUILD_VERSION for tag push
+        id: set_build_version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "BUILD_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "BUILD_VERSION=latest" >> $GITHUB_ENV
+          fi
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+
+      - name: Build image
+        env:
+          PACKAGE_NAME: github.com/froystein/temp-operator
+        run: |
+          export GOFLAGS="-ldflags=-X=${{ env.PACKAGE_NAME }}/internal/build.Version=$BUILD_VERSION"
+          KO_DOCKER_REPO=${{ env.IMAGE_NAME }}
+          ko build ./cmd --bare -t $BUILD_VERSION
