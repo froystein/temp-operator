@@ -17,6 +17,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,4 +52,14 @@ jobs:
         run: |
           export GOFLAGS="-ldflags=-X=${{ env.PACKAGE_NAME }}/internal/build.Version=$BUILD_VERSION"
           KO_DOCKER_REPO=${{ env.IMAGE_NAME }}
-          ko build ./cmd --bare -t $BUILD_VERSION
+          DIGEST=$(ko build ./cmd --bare -t $BUILD_VERSION | tee /dev/tty | grep -o 'sha256:[a-f0-9]\{64\}')
+          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
+
+      - name: cosign-installer
+        uses: sigstore/cosign-installer@v3.5.0
+      - name: Check install
+        run: cosign version
+
+      - name: Sign the image with GitHub OIDC Token
+        run: |
+          cosign sign --yes "${{ env.IMAGE_NAME }}@${{ env.IMAGE_DIGEST }}"
