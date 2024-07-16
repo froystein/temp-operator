@@ -44,7 +44,7 @@ jobs:
       - name: Setup kind
         run: |
           go install sigs.k8s.io/kind@v0.23.0
-          kind create cluster --name=temp-operator
+          kind create cluster
       - name: Test E2E
         run: make test-e2e
 
