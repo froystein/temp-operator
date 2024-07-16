@@ -4,7 +4,7 @@
 </h1>
 
 <p align="center">
-    <em>Simple operator for testing purposes.</a>.</em>
+    <em>Simple operator for testing purposes.</em>
 </p>
 <p align="center">
     <!-- Line 1 -->
